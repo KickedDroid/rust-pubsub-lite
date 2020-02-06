@@ -1,0 +1,14 @@
+[package]
+name = "rust-crdt"
+version = "0.1.0"
+authors = ["Aidan <asmaidan@look.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bytes = "0.5"
+futures = "0.3.1"
+libp2p = "0.15.0"
+async-std = "1.0"
+env_logger = "0.7.1"
