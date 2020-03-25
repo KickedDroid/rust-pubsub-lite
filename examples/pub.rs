@@ -1,36 +1,3 @@
-// Copyright 2020 Parity Technologies (UK) Ltd.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and associated documentation files (the "Software"),
-// to deal in the Software without restriction, including without limitation
-// the rights to use, copy, modify, merge, publish, distribute, sublicense,
-// and/or sell copies of the Software, and to permit persons to whom the
-// Software is furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-// DEALINGS IN THE SOFTWARE.
-
-//! A minimal node that can interact with ipfs
-//!
-//! This node implements the gossipsub, ping and identify protocols. It supports
-//! the ipfs private swarms feature by reading the pre shared key file `swarm.key`
-//! from the IPFS_PATH environment variable or from the default location.
-//!
-//! You can pass any number of nodes to be dialed.
-//!
-//! On startup, this example will show a list of addresses that you can dial
-//! from a go-ipfs or js-ipfs node.
-//!
-//! You can ping this node, or use pubsub (gossipsub) on the topic "chat". For this
-//! to work, the ipfs node needs to be configured to use gossipsub.
 use async_std::{io, task};
 use futures::{future, prelude::*};
 use libp2p::{
@@ -57,7 +24,7 @@ use std::{
     time::Duration,
 };
 
-/// Builds the transport that serves as a common ground for all connections.
+
 pub fn build_transport(
     key_pair: identity::Keypair,
     psk: Option<PreSharedKey>,
@@ -106,7 +73,6 @@ fn get_ipfs_path() -> Box<Path> {
         })
 }
 
-/// Read the pre shared key file from the given ipfs directory
 fn get_psk(path: Box<Path>) -> std::io::Result<Option<String>> {
     let swarm_key_file = path.join("swarm.key");
     match fs::read_to_string(swarm_key_file) {
@@ -170,7 +136,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Create a Gosspipsub topic
     let gossipsub_topic = gossipsub::Topic::new("coronavirus-latest-location-data-topic".into());
 
-    // We create a custom network behaviour that combines gossipsub, ping and identify.
     #[derive(NetworkBehaviour)]
     struct MyBehaviour {
         gossipsub: Gossipsub,
@@ -181,7 +146,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     impl NetworkBehaviourEventProcess<IdentifyEvent>
         for MyBehaviour
     {
-        // Called when `identify` produces an event.
         fn inject_event(&mut self, event: IdentifyEvent) {
             println!("identify: {:?}", event);
         }
@@ -190,7 +154,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     impl NetworkBehaviourEventProcess<GossipsubEvent>
         for MyBehaviour
     {
-        // Called when `gossipsub` produces an event.
         fn inject_event(&mut self, event: GossipsubEvent) {
             match event {
                 GossipsubEvent::Message(peer_id, id, message) => println!(
@@ -207,7 +170,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     impl NetworkBehaviourEventProcess<PingEvent>
         for MyBehaviour
     {
-        // Called when `ping` produces an event.
         fn inject_event(&mut self, event: PingEvent) {
             use ping::handler::{PingFailure, PingSuccess};
             match event {
