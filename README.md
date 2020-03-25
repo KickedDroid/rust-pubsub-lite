@@ -11,6 +11,4 @@ Give it a few seconds. It should then estabilish a connection with the node and 
 
 ---
 
-Docs for rust-libp2p 
-
-[Here](https://docs.rs/libp2p/0.16.2/libp2p/gossipsub/index.html)
+Docs for rust-libp2p [Here](https://docs.rs/libp2p/0.16.2/libp2p/gossipsub/index.html)
