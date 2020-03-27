@@ -24,7 +24,7 @@ use std::{
     time::Duration,
 };
 
-
+/// Builds the transport that serves as a common ground for all connections.
 pub fn build_transport(
     key_pair: identity::Keypair,
     psk: Option<PreSharedKey>,
@@ -73,6 +73,7 @@ fn get_ipfs_path() -> Box<Path> {
         })
 }
 
+/// Read the pre shared key file from the given ipfs directory
 fn get_psk(path: Box<Path>) -> std::io::Result<Option<String>> {
     let swarm_key_file = path.join("swarm.key");
     match fs::read_to_string(swarm_key_file) {
@@ -136,6 +137,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Create a Gosspipsub topic
     let gossipsub_topic = gossipsub::Topic::new("coronavirus-latest-location-data-topic".into());
 
+    // We create a custom network behaviour that combines gossipsub, ping and identify.
     #[derive(NetworkBehaviour)]
     struct MyBehaviour {
         gossipsub: Gossipsub,
@@ -146,6 +148,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     impl NetworkBehaviourEventProcess<IdentifyEvent>
         for MyBehaviour
     {
+        // Called when `identify` produces an event.
         fn inject_event(&mut self, event: IdentifyEvent) {
             println!("identify: {:?}", event);
         }
@@ -154,14 +157,17 @@ fn main() -> Result<(), Box<dyn Error>> {
     impl NetworkBehaviourEventProcess<GossipsubEvent>
         for MyBehaviour
     {
+        // Called when `gossipsub` produces an event.
         fn inject_event(&mut self, event: GossipsubEvent) {
             match event {
-                GossipsubEvent::Message(peer_id, id, message) => println!(
-                    "Got message: {} with id: {} from peer: {:?}",
-                    String::from_utf8_lossy(&message.data),
-                    id,
-                    peer_id
-                ),
+                GossipsubEvent::Message(peer_id, id, message) => {
+                    println!(
+                        "Got message: {} with id: {} from peer: {:?}",
+                        String::from_utf8_lossy(&message.data),
+                        id,
+                        peer_id
+                    )
+                }
                 _ => {}
             }
         }
@@ -170,6 +176,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     impl NetworkBehaviourEventProcess<PingEvent>
         for MyBehaviour
     {
+        // Called when `ping` produces an event.
         fn inject_event(&mut self, event: PingEvent) {
             use ping::handler::{PingFailure, PingSuccess};
             match event {
@@ -241,13 +248,12 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Kick it off
     let mut listening = false;
     task::block_on(future::poll_fn(move |cx: &mut Context| {
+
         loop {
             match stdin.try_poll_next_unpin(cx)? {
-                Poll::Ready(Some(line)) => {
-                    swarm.gossipsub.publish(&gossipsub_topic, line.as_bytes());
-                }
+                Poll::Ready(Some(line)) => handle_input_line(&mut swarm.gossipsub, line),
                 Poll::Ready(None) => panic!("Stdin closed"),
-                Poll::Pending => break,
+                Poll::Pending => break
             }
         }
         loop {
@@ -267,4 +273,48 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
         Poll::Pending
     }))
+}
+
+fn handle_input_line(gossipsub: &mut Gossipsub, line: String) {
+    let mut args = line.split(" ");
+
+    match args.next() {
+        Some("SUB") => {
+            let topic = {
+                match args.next() {
+                    Some(topic) => gossipsub::Topic::new(topic.into()),
+                    None => {
+                        eprintln!("Expected topic");
+                        return;
+                    }
+                }
+            };
+            gossipsub.subscribe(topic.clone());
+            println!("Subscribed to topic {:?}", topic);
+        }
+        Some("PUB") => {
+            let topic = {
+                match args.next() {
+                    Some(topic) => gossipsub::Topic::new(topic.into()),
+                    None => {
+                        eprintln!("Expected topic");
+                        return;
+                    }
+                }
+            };
+            let msg = {
+                match args.next() {
+                    Some(msg) => msg,
+                    None => {
+                        eprintln!("Expected message");
+                        return;
+                    }
+                }
+            };
+            gossipsub.publish(&topic.clone(), msg.as_bytes());
+        }
+        _ => {
+            eprintln!("expected PUB or SUB");
+        }
+    }
 }

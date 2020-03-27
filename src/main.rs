@@ -279,6 +279,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Kick it off
     let mut listening = false;
     task::block_on(future::poll_fn(move |cx: &mut Context| {
+
+        loop {
+            match stdin.try_poll_next_unpin(cx)? {
+                Poll::Ready(Some(line)) => handle_input_line(&mut swarm.gossipsub, line),
+                Poll::Ready(None) => panic!("Stdin closed"),
+                Poll::Pending => break
+            }
+        }
         loop {
             match stdin.try_poll_next_unpin(cx)? {
                 Poll::Ready(Some(line)) => {
@@ -305,4 +313,26 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
         Poll::Pending
     }))
+}
+
+fn handle_input_line(gossipsub: &mut Gossipsub, line: String) {
+    let mut args = line.split(" ");
+
+    match args.next() {
+        Some("SUB") => {
+            let topic = {
+                match args.next() {
+                    Some(topic) => gossipsub::Topic::new(topic.into()),
+                    None => {
+                        eprintln!("Expected topic");
+                        return;
+                    }
+                }
+            };
+            gossipsub.subscribe(topic.clone());
+        }
+        _ => {
+            eprintln!("expected GET or PUT");
+        }
+    }
 }
