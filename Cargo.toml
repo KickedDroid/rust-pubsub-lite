@@ -17,7 +17,8 @@ tonic = "*"
 prost = "*"
 prost-build = "*"
 serde_json = "1.0.48"
-
+tungstenite = "0.10.1"
 
 [build-dependencies]
 prost-build = "*"
+protoc-grpcio = "1.0.2"

@@ -135,7 +135,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     let transport = build_transport(local_key.clone(), psk);
 
     // Create a Gosspipsub topic
-    let gossipsub_topic = gossipsub::Topic::new("coronavirus-latest-location-data-topic".into());
+    let gossipsub_topic = gossipsub::Topic::new("chat".into());
+    //let gossipsub_topic2 = gossipsub::Topic::new("c".into());
 
     // We create a custom network behaviour that combines gossipsub, ping and identify.
     #[derive(NetworkBehaviour)]
@@ -167,7 +168,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                         id,
                         peer_id
                     )
-                }
+                }           
                 _ => {}
             }
         }
@@ -184,11 +185,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                     peer,
                     result: Result::Ok(PingSuccess::Ping { rtt }),
                 } => {
-                    println!(
-                        "ping: rtt to {} is {} ms",
-                        peer.to_base58(),
-                        rtt.as_millis()
-                    );
+                    
                 }
                 PingEvent {
                     peer,
@@ -248,6 +245,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Kick it off
     let mut listening = false;
     task::block_on(future::poll_fn(move |cx: &mut Context| {
+        
 
         loop {
             match stdin.try_poll_next_unpin(cx)? {
@@ -282,15 +280,19 @@ fn handle_input_line(gossipsub: &mut Gossipsub, line: String) {
         Some("SUB") => {
             let topic = {
                 match args.next() {
-                    Some(topic) => gossipsub::Topic::new(topic.into()),
+                    Some(topic) => gossipsub::Topic::new(String::from(topic).into()),
                     None => {
                         eprintln!("Expected topic");
                         return;
                     }
                 }
             };
-            gossipsub.subscribe(topic.clone());
-            println!("Subscribed to topic {:?}", topic);
+            let x = gossipsub.subscribe(topic.clone());
+            if x == true {
+                println!("Subscribed to topic {:?}", topic);
+            } else {
+                println!("Failed to subscribe to topic");
+            }
         }
         Some("PUB") => {
             let topic = {
